@@ -17,8 +17,7 @@ defmodule SupercolliderCubesWeb.Router do
   scope "/", SupercolliderCubesWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
-    live "/audio", AudioLive
+    live "/", AudioLive
   end
 
   # Other scopes may use custom stacks.

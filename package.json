@@ -1,0 +1,17 @@
+{
+  "name": "supercollider_cubes",
+  "private": true,
+  "version": "1.0.0",
+  "description": "This root level package.json is just to allow editors to find eslint and other dev tooling",
+  "type": "module",
+  "prettier": "@ledhed2222/prettier-config",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@ledhed2222/prettier-config": "^1.0.0",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1"
+  }
+}

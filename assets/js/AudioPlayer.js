@@ -48,7 +48,6 @@ export default class AudioPlayer extends ViewHook {
       console.log('Received WebRTC message:', msg)
       this.handleSignal(msg)
     })
-
   }
 
   setupWebRTC() {
@@ -85,7 +84,7 @@ export default class AudioPlayer extends ViewHook {
         console.log('Sending ICE candidate')
         const candidateMsg = {
           type: 'ice_candidate',
-          data: event.candidate.toJSON()
+          data: event.candidate.toJSON(),
         }
         this.channel.push(`audio:${this.peerId}`, JSON.stringify(candidateMsg))
       }
@@ -96,8 +95,10 @@ export default class AudioPlayer extends ViewHook {
       console.log('Connection state:', this.peerConnection.connectionState)
       if (this.peerConnection.connectionState === 'connected') {
         this.pushEvent('connection_status', { connected: true })
-      } else if (this.peerConnection.connectionState === 'failed' ||
-                 this.peerConnection.connectionState === 'disconnected') {
+      } else if (
+        this.peerConnection.connectionState === 'failed' ||
+        this.peerConnection.connectionState === 'disconnected'
+      ) {
         this.pushEvent('connection_status', { connected: false })
       }
     }
@@ -111,7 +112,7 @@ export default class AudioPlayer extends ViewHook {
 
     switch (type) {
       case 'sdp_offer':
-      case 'offer':
+      case 'offer': {
         console.log('Received offer from server, creating answer')
         // Membrane sends {type: 'sdp_offer', data: {type: 'offer', sdp: '...'}}
         const offerData = data || msg
@@ -128,7 +129,7 @@ export default class AudioPlayer extends ViewHook {
             // Send answer in the format Membrane expects
             const answerMsg = {
               type: 'sdp_answer',
-              data: this.peerConnection.localDescription.toJSON()
+              data: this.peerConnection.localDescription.toJSON(),
             }
             this.channel.push(`audio:${this.peerId}`, JSON.stringify(answerMsg))
           })
@@ -136,9 +137,10 @@ export default class AudioPlayer extends ViewHook {
             console.error('Error handling offer:', error)
           })
         break
+      }
 
       case 'ice_candidate':
-      case 'candidate':
+      case 'candidate': {
         console.log('Adding ICE candidate')
         // Membrane sends {type: 'ice_candidate', data: {candidate: '...', ...}}
         const candidateData = data || msg
@@ -148,6 +150,7 @@ export default class AudioPlayer extends ViewHook {
             console.error('Error adding ICE candidate:', error)
           })
         break
+      }
 
       default:
         console.warn('Unknown signal type:', type)
@@ -175,7 +178,8 @@ export default class AudioPlayer extends ViewHook {
     console.log('Stream active:', stream.active)
     console.log('Stream tracks:', stream.getTracks())
 
-    this.el.play()
+    this.el
+      .play()
       .then(() => {
         console.log('Audio playback started successfully')
         console.log('Audio element paused:', this.el.paused)
@@ -194,7 +198,11 @@ export default class AudioPlayer extends ViewHook {
   }
 
   destroyed() {
-    if (this.peerConnection) this.peerConnection.close()
-    if (this.channel) this.channel.leave()
+    if (this.peerConnection) {
+      this.peerConnection.close()
+    }
+    if (this.channel) {
+      this.channel.leave()
+    }
   }
 }

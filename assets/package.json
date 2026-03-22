@@ -1,5 +1,6 @@
 {
   "name": "supercollider_cubes",
+  "private": true,
   "version": "0.1.0",
   "description": "SuperCollider audio streaming with Phoenix",
   "repository": {},
@@ -14,6 +15,6 @@
     "phoenix_live_view": "file:../deps/phoenix_live_view"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.2"
   }
 }

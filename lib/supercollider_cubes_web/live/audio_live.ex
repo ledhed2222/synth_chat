@@ -22,12 +22,17 @@ defmodule SupercolliderCubesWeb.AudioLive do
   end
 
   @impl true
-  def handle_event("client-audio-update", %{"pos_x" => pos_x, "pos_y" => pos_y}, socket) do
-    freq = 200 + (pos_x / 800) * 1800
-    amp = 1 - (pos_y / 800)
+  def handle_event(
+        "client-audio-update",
+        %{"frequency" => %{"x" => fx, "y" => fy}, "filterCutoff" => %{"x" => cx}},
+        socket
+      ) do
+    freq = 200 + fx * 1800
+    amp = 1 - fy
+    filter_cutoff = 200 + cx * 7800
 
     SupercolliderCubes.ScSynth.send_command(
-      "~synth.set(\\freq, #{freq}, \\amp, #{amp})"
+      "~synth.set(\\freq, #{freq}, \\amp, #{amp}, \\filterCutoff, #{filter_cutoff})"
     )
 
     {:noreply, socket}
