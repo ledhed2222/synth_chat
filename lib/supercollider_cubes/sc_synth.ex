@@ -6,12 +6,7 @@ defmodule SupercolliderCubes.ScSynth do
   use GenServer
   require Logger
 
-  @sclang_host ~c"localhost"
   @sclang_port 57120
-  @sclang_init_script_path Application.app_dir(
-                             :supercollider_cubes,
-                             "priv/supercollider/on_connection.scd"
-                           )
 
   # Client API
 
@@ -50,7 +45,7 @@ defmodule SupercolliderCubes.ScSynth do
 
   @impl true
   def handle_info(:connect, state) do
-    case :gen_tcp.connect(@sclang_host, @sclang_port, [:binary, active: true]) do
+    case :gen_tcp.connect(sclang_host(), @sclang_port, [:binary, active: true]) do
       {:ok, socket} ->
         Logger.info("Connected to SuperCollider in Docker container")
         Logger.info("Sending on_connection.scd...")
@@ -108,14 +103,19 @@ defmodule SupercolliderCubes.ScSynth do
 
   def terminate(_reason, _state), do: :ok
 
+  defp sclang_host do
+    System.get_env("SC_HOST", "localhost") |> String.to_charlist()
+  end
+
   defp sc_init_script do
-    case File.read(@sclang_init_script_path) do
+    path = Application.app_dir(:supercollider_cubes, "priv/supercollider/on_connection.scd")
+
+    case File.read(path) do
       {:ok, body} ->
         body
 
       {:error, reason} ->
-        Logger.error("Failed to read on_connection.scd at
-          #{@sclang_init_script_path}: #{inspect(reason)}")
+        Logger.error("Failed to read on_connection.scd at #{path}: #{inspect(reason)}")
         ""
     end
   end

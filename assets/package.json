@@ -8,6 +8,7 @@
   "scripts": {
     "deploy": "cd .. && mix assets.deploy && rm -f _build/esbuild*"
   },
+  "prettier": "@ledhed2222/prettier-config",
   "dependencies": {
     "matter-js": "^0.20.0",
     "phoenix": "file:../deps/phoenix",
@@ -15,6 +16,14 @@
     "phoenix_live_view": "file:../deps/phoenix_live_view"
   },
   "devDependencies": {
-    "esbuild": "^0.24.2"
+    "@eslint/js": "^10.0.1",
+    "@ledhed2222/prettier-config": "^1.0.0",
+    "@types/matter-js": "^0.20.2",
+    "esbuild": "^0.24.2",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1"
   }
 }

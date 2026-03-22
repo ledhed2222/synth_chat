@@ -6,7 +6,8 @@ defmodule SupercolliderCubesWeb.AudioLive do
     {:ok,
      socket
      |> assign(:connected, false)
-     |> assign(:muted, true)}
+     |> assign(:muted, true)
+     |> assign(:stun_server, System.get_env("STUN_SERVER", ""))}
   end
 
   @impl true

@@ -12,17 +12,23 @@ defmodule Mix.Tasks.Dev do
 
   use Mix.Task
 
-  @compose_dir "supercollider"
+  @compose_dir "."
 
   @impl Mix.Task
   def run(_args) do
     Mix.shell().info("==> Starting SuperCollider container...")
 
-    case docker_compose(["up", "--build", "--detach"]) do
+    case docker_compose(["up", "supercollider", "--build", "--detach"]) do
       0 ->
         Mix.shell().info("==> SuperCollider container is up")
         Mix.shell().info("==> Starting Phoenix server (SC logs interleaved)...")
         Task.start(fn -> stream_sc_logs() end)
+
+        System.at_exit(fn _ ->
+          Mix.shell().info("==> Stopping SuperCollider container...")
+          docker_compose(["down"])
+        end)
+
         Mix.Task.run("phx.server")
 
       code ->
@@ -37,7 +43,8 @@ defmodule Mix.Tasks.Dev do
     port =
       Port.open(
         {:spawn_executable, System.find_executable("docker")},
-        [:stream, :line, :exit_status, args: ["compose", "logs", "--follow", "--no-log-prefix"],
+        [:stream, :line, :exit_status,
+         args: ["compose", "logs", "supercollider", "--follow", "--no-log-prefix"],
          cd: @compose_dir]
       )
 

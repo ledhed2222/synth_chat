@@ -9,7 +9,6 @@ defmodule SupercolliderCubes.Application do
   def start(_type, _args) do
     children = [
       SupercolliderCubesWeb.Telemetry,
-      SupercolliderCubes.Repo,
       {DNSCluster, query: Application.get_env(:supercollider_cubes, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: SupercolliderCubes.PubSub},
       # Start SuperCollider command client (connects to Docker container)

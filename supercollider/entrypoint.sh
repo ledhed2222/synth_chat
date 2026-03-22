@@ -25,7 +25,9 @@ socat -u OPEN:/tmp/audio.fifo,nonblock TCP-LISTEN:7777,fork,reuseaddr &
 STREAM_PID=$!
 
 echo "Starting TCP-to-pipe bridge on port 57120..."
-socat -u TCP-LISTEN:57120,reuseaddr,fork OPEN:/tmp/sc_pipe,creat,append &
+while true; do
+  socat -u TCP-LISTEN:57120,reuseaddr OPEN:/tmp/sc_pipe,creat,append
+done &
 SOCAT_PID=$!
 
 # Start SuperCollider

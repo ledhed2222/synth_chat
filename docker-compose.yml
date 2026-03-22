@@ -1,0 +1,44 @@
+services:
+  supercollider:
+    build:
+      context: ./supercollider
+      dockerfile: Dockerfile
+    container_name: sc_audio
+    volumes:
+      - ./supercollider:/sc
+      - /dev/shm:/dev/shm
+    environment:
+      - JACK_NO_AUDIO_RESERVATION=1
+    cap_add:
+      - IPC_LOCK
+      - SYS_NICE
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      rtprio:
+        soft: 95
+        hard: 95
+    ports:
+      - "57120:57120"
+      - "7777:7777"
+    shm_size: '2gb'
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  phoenix:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: phoenix_app
+    ports:
+      - "4000:4000"
+    environment:
+      - PHX_HOST=${PHX_HOST:-synthchat.gregweisbrod.com}
+      - PORT=4000
+      - SC_HOST=supercollider
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+    depends_on:
+      - supercollider
+    restart: unless-stopped
