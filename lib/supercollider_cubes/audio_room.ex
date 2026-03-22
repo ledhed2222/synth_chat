@@ -13,13 +13,16 @@ defmodule SupercolliderCubes.AudioRoom do
   @impl true
   def handle_init(_ctx, signaling_id: signaling_id) do
     spec = [
-      child(:audio_source, %TcpAudioSource{host: "localhost", port: 7777})
+      child(:audio_source, %TcpAudioSource{
+        host: System.get_env("SC_HOST", "localhost"),
+        port: 7777
+      })
       |> child(:opus_encoder, Membrane.Opus.Encoder)
       |> via_in(:input, options: [kind: :audio])
       |> child(:webrtc_sink, %WebRTC.Sink{
         signaling: Membrane.WebRTC.PhoenixSignaling.new(signaling_id),
         tracks: [:audio],
-        ice_servers: []
+        ice_servers: get_stun_server()
       })
     ]
 
@@ -39,5 +42,15 @@ defmodule SupercolliderCubes.AudioRoom do
     )
 
     {[], state}
+  end
+
+  defp get_stun_server do
+    case System.get_env("STUN_SERVER", "") do
+      "" ->
+        []
+
+      url ->
+        [%{urls: url}]
+    end
   end
 end

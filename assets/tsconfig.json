@@ -22,10 +22,10 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "paths": {
-      "*": ["../deps/*"]
-    },
     "allowJs": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
     "noEmit": true
   },
   "include": ["js/**/*"]

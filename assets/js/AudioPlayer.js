@@ -9,6 +9,9 @@ export default class AudioPlayer extends ViewHook {
 
     this.handleEvent('unmute_audio', () => {
       this.el.muted = false
+      if (this.el.srcObject) {
+        this.el.play().catch((error) => console.error('Error starting audio playback:', error))
+      }
       this.pushEvent('connection_status', { connected: true })
     })
 
@@ -52,8 +55,9 @@ export default class AudioPlayer extends ViewHook {
 
   setupWebRTC() {
     // Create RTCPeerConnection
+    const stunServer = this.el.dataset.stunServer
     this.peerConnection = new RTCPeerConnection({
-      iceServers: [],
+      iceServers: stunServer ? [{ urls: stunServer }] : [],
     })
 
     // Handle incoming audio tracks
@@ -74,7 +78,7 @@ export default class AudioPlayer extends ViewHook {
         console.log('Track muted!')
       }
 
-      // Try to play immediately too
+      // Set up the stream but don't play yet — wait for user interaction (unmute click)
       this.playAudio(event)
     }
 
@@ -174,21 +178,6 @@ export default class AudioPlayer extends ViewHook {
     this.el.srcObject = stream
     this.el.muted = true
     this.el.volume = 1.0
-
-    console.log('Stream active:', stream.active)
-    console.log('Stream tracks:', stream.getTracks())
-
-    this.el
-      .play()
-      .then(() => {
-        console.log('Audio playback started successfully')
-        console.log('Audio element paused:', this.el.paused)
-        console.log('Audio element muted:', this.el.muted)
-        console.log('Audio element volume:', this.el.volume)
-      })
-      .catch((error) => {
-        console.error('Error starting audio playback:', error)
-      })
   }
 
   generatePeerId() {

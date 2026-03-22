@@ -9,9 +9,10 @@ const RENDER_OPTIONS = {
   wireframes: false,
 }
 const ENGINE = Matter.Engine.create()
-ENGINE.world.gravity = {
+ENGINE.gravity = {
   x: 0,
   y: 0,
+  scale: 0.001,
 }
 const RUNNER = Matter.Runner.create()
 
@@ -52,6 +53,10 @@ export default class PhysicsCanvas extends ViewHook {
         thickness,
         { isStatic: true },
       ),
+      // ceiling
+      Matter.Bodies.rectangle(WIDTH / 2, -thickness / 2, WIDTH, thickness, {
+        isStatic: true,
+      }),
       // left
       Matter.Bodies.rectangle(-thickness / 2, HEIGHT / 2, thickness, HEIGHT, {
         isStatic: true,
