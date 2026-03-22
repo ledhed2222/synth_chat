@@ -1,0 +1,21 @@
+<div>
+  <button
+    id="connect-btn"
+    phx-click="toggle_audio_click"
+    class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    <%= if @muted, do: "Unmute", else: "Mute" %>
+  </button>
+  <section
+    id="canvas-root"
+    phx-hook="PhysicsCanvas"
+    phx-update="ignore"
+  >
+  </section>
+  <audio
+    id="audio-player"
+    autoplay
+    phx-hook="AudioPlayer"
+  >
+  </audio>
+</div>
