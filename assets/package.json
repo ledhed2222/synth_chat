@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "SuperCollider audio streaming with Phoenix",
   "repository": {},
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "deploy": "cd .. && mix assets.deploy && rm -f _build/esbuild*"
   },
