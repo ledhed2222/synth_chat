@@ -1,56 +1,73 @@
 defmodule SupercolliderCubes.AudioRoom do
   @moduledoc """
-  Membrane pipeline that captures SuperCollider audio via TCP and streams it via WebRTC.
-  Uses Membrane.WebRTC.Sink with Phoenix signaling.
+  Manages AudioRoom Membrane pipelines for each WebRTC peer.
+  Each peer gets their own pipeline instance.
   """
-  use Membrane.Pipeline
+  use GenServer
+  require Logger
 
-  require Membrane.Logger
+  alias SupercolliderCubes.AudioRoom
 
-  alias Membrane.WebRTC
-  alias SupercolliderCubes.TcpAudioSource
+  # Client API
+
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  def add_peer(peer_id) do
+    GenServer.call(__MODULE__, {:add_peer, peer_id})
+  end
+
+  def remove_peer(peer_id) do
+    GenServer.call(__MODULE__, {:remove_peer, peer_id})
+  end
+
+  # Server Callbacks
 
   @impl true
-  def handle_init(_ctx, signaling_id: signaling_id) do
-    spec = [
-      child(:audio_source, %TcpAudioSource{
-        host: System.get_env("SC_HOST", "localhost"),
-        port: 7777
-      })
-      |> child(:opus_encoder, Membrane.Opus.Encoder)
-      |> via_in(:input, options: [kind: :audio])
-      |> child(:webrtc_sink, %WebRTC.Sink{
-        signaling: Membrane.WebRTC.PhoenixSignaling.new(signaling_id),
-        tracks: [:audio],
-        ice_servers: get_stun_server()
-      })
-    ]
+  def init(_opts) do
+    Logger.info("Starting AudioRoom")
 
-    {[spec: spec], %{signaling_id: signaling_id}}
+    # Start the multiplexer and encoding pipeline
+    {:ok, _pid} = AudioRoom.Multiplexer.start_link()
+
+    {:ok, _supervisor, _pid} =
+      Membrane.Pipeline.start_link(AudioRoom.EncodingPipeline)
+
+    {:ok, %{pipelines: %{}}}
   end
 
   @impl true
-  def handle_child_notification(notification, :webrtc_sink, _ctx, state) do
-    Membrane.Logger.debug("WebRTC notification: #{inspect(notification)}")
-    {[], state}
+  def handle_call({:add_peer, peer_id}, _from, state) do
+    Logger.info("Starting pipeline for peer: #{peer_id}")
+
+    # Start a new pipeline for this peer with Phoenix signaling
+    {:ok, _supervisor, pipeline} =
+      Membrane.Pipeline.start_link(AudioRoom.WebRTC, signaling_id: "audio:#{peer_id}")
+
+    pipelines = Map.put(state.pipelines, peer_id, pipeline)
+
+    {:reply, :ok, %{state | pipelines: pipelines}}
   end
 
   @impl true
-  def handle_child_notification(notification, element, _ctx, state) do
-    Membrane.Logger.debug(
-      "Received notification from #{inspect(element)}: #{inspect(notification)}"
-    )
+  def handle_call({:remove_peer, peer_id}, _from, state) do
+    Logger.info("Stopping pipeline for peer: #{peer_id}")
 
-    {[], state}
-  end
+    case Map.get(state.pipelines, peer_id) do
+      nil ->
+        {:reply, :ok, state}
 
-  defp get_stun_server do
-    case System.get_env("STUN_SERVER", "") do
-      "" ->
-        []
-
-      url ->
-        [%{urls: url}]
+      pipeline ->
+        Membrane.Pipeline.terminate(pipeline)
+        pipelines = Map.delete(state.pipelines, peer_id)
+        {:reply, :ok, %{state | pipelines: pipelines}}
     end
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.debug("Unhandled message: #{inspect(msg)}")
+    {:noreply, state}
   end
 end

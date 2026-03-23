@@ -9,12 +9,14 @@ defmodule SupercolliderCubes.Application do
   def start(_type, _args) do
     children = [
       SupercolliderCubesWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:supercollider_cubes, :dns_cluster_query) || :ignore},
+      {DNSCluster,
+       query: Application.get_env(:supercollider_cubes, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: SupercolliderCubes.PubSub},
       # Start SuperCollider command client (connects to Docker container)
       SupercolliderCubes.ScSynth,
+      # Start the broadcaster, which is basically a multiplexer for sending
       # Start the audio room manager for WebRTC streaming
-      SupercolliderCubes.AudioRoomManager,
+      SupercolliderCubes.AudioRoom,
       # Start to serve requests, typically the last entry
       SupercolliderCubesWeb.Endpoint
     ]

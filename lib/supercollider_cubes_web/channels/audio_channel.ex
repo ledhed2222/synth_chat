@@ -6,7 +6,7 @@ defmodule SupercolliderCubesWeb.AudioChannel do
 
   require Logger
 
-  alias SupercolliderCubes.AudioRoomManager
+  alias SupercolliderCubes.AudioRoom
   alias Membrane.WebRTC.PhoenixSignaling
 
   @impl true
@@ -20,7 +20,7 @@ defmodule SupercolliderCubesWeb.AudioChannel do
     socket = assign(socket, :signaling_id, "audio:#{peer_id}")
 
     # Start a pipeline for this peer
-    AudioRoomManager.add_peer(peer_id)
+    AudioRoom.add_peer(peer_id)
 
     {:ok, socket}
   end
@@ -49,7 +49,7 @@ defmodule SupercolliderCubesWeb.AudioChannel do
 
     if peer_id do
       Logger.info("Peer #{peer_id} left audio channel")
-      AudioRoomManager.remove_peer(peer_id)
+      AudioRoom.remove_peer(peer_id)
     end
 
     :ok

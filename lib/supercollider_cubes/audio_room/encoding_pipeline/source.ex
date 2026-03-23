@@ -1,4 +1,4 @@
-defmodule SupercolliderCubes.TcpAudioSource do
+defmodule SupercolliderCubes.AudioRoom.EncodingPipeline.Source do
   @moduledoc """
   Membrane source that reads raw PCM audio from a TCP connection.
   Connects to the SuperCollider Docker container's audio stream.
@@ -7,24 +7,27 @@ defmodule SupercolliderCubes.TcpAudioSource do
 
   alias Membrane.Buffer
 
-  def_options host: [
-                spec: String.t(),
-                default: "localhost",
-                description: "TCP server host"
-              ],
-              port: [
-                spec: :inet.port_number(),
-                default: 7777,
-                description: "TCP server port"
-              ]
+  def_options(
+    host: [
+      spec: String.t(),
+      default: "localhost",
+      description: "TCP server host"
+    ],
+    port: [
+      spec: :inet.port_number(),
+      default: 7777,
+      description: "TCP server port"
+    ]
+  )
 
-  def_output_pad :output,
+  def_output_pad(:output,
     accepted_format: %Membrane.RawAudio{
       sample_format: :s16le,
       sample_rate: 48_000,
       channels: 2
     },
     flow_control: :push
+  )
 
   @impl true
   def handle_init(_ctx, opts) do
