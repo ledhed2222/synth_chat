@@ -70,8 +70,7 @@ defmodule SupercolliderCubes.MixProject do
       ## additional dependencies
       {:membrane_core, "~> 1.2"},
       {:membrane_webrtc_plugin, "~> 0.26"},
-      {:membrane_opus_plugin, "~> 0.20"},
-      {:uuid, "~> 1.1"}
+      {:membrane_opus_plugin, "~> 0.20"}
     ]
   end
 
