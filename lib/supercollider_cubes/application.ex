@@ -14,7 +14,8 @@ defmodule SupercolliderCubes.Application do
       {Phoenix.PubSub, name: SupercolliderCubes.PubSub},
       # Start SuperCollider command client (connects to Docker container)
       SupercolliderCubes.ScSynth,
-      # Start the broadcaster, which is basically a multiplexer for sending
+      # Required for Membrane WebRTC Phoenix channel signaling
+      Membrane.WebRTC.PhoenixSignaling,
       # Start the audio room manager for WebRTC streaming
       SupercolliderCubes.AudioRoom,
       # Start to serve requests, typically the last entry
