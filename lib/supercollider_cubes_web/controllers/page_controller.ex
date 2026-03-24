@@ -6,6 +6,6 @@ defmodule SupercolliderCubesWeb.PageController do
   end
 
   def get_uuid do
-    UUID.uuid4()
+    Ecto.UUID.generate()
   end
 end
