@@ -163,7 +163,7 @@ export default class PhysicsCanvas extends ViewHook {
     let lastSent = 0
     Matter.Events.on(ENGINE, 'afterUpdate', () => {
       const now = Date.now()
-      if (now - lastSent < 100) {
+      if (now - lastSent < 10) {
         return
       }
       lastSent = now
