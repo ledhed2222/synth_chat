@@ -5,7 +5,6 @@ defmodule SupercolliderCubes.AudioRoom.WebRTC.Source do
   Membrane.Buffers for the WebRTC pipeline.
   """
   use Membrane.Source
-  require Membrane.Logger
 
   alias SupercolliderCubes.AudioRoom.Multiplexer
 
@@ -28,7 +27,6 @@ defmodule SupercolliderCubes.AudioRoom.WebRTC.Source do
   @impl true
   def handle_info({:audio_frame, buffer}, _ctx, state) do
     if state.playing do
-      Membrane.Logger.debug("AudioRoomSource got frame #{byte_size(buffer.payload)} bytes")
       {[buffer: {:output, buffer}], state}
     else
       {[], state}

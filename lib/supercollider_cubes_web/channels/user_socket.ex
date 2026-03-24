@@ -3,12 +3,15 @@ defmodule SupercolliderCubesWeb.UserSocket do
 
   # Channels
   channel "audio:*", SupercolliderCubesWeb.AudioChannel
+  channel "physics:*", SupercolliderCubesWeb.PhysicsChannel
 
   @impl true
-  def connect(_params, socket, _connect_info) do
-    {:ok, socket}
+  def connect(params, socket, _connect_info) do
+    {:ok, assign(socket, :uuid, params["uuid"])}
   end
 
   @impl true
-  def id(_socket), do: nil
+  def id(socket) do
+    "user_socket:#{socket.assigns.uuid}"
+  end
 end

@@ -4,7 +4,6 @@ defmodule SupercolliderCubes.AudioRoom.Multiplexer do
   to transmit over WebRTC
   """
   use GenServer
-  require Logger
 
   # Client API
 
@@ -33,10 +32,6 @@ defmodule SupercolliderCubes.AudioRoom.Multiplexer do
 
   @impl true
   def handle_cast({:send_frame, frame}, state) do
-    Logger.debug(
-      "AudioRoom.Multiplexer sending frame to #{MapSet.size(state[:listeners])} listeners"
-    )
-
     state[:listeners]
     |> Enum.each(fn listener ->
       send(listener, {:audio_frame, frame})

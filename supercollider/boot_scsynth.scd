@@ -5,6 +5,7 @@ s.options.numOutputBusChannels = 2;
 s.options.numInputBusChannels = 0;
 s.options.sampleRate = 48000;
 s.options.blockSize = 64;
+s.options.memSize = 1048576;
 
 // ~whenReady is available as soon as sclang evaluates this file, before scsynth has
 // finished booting. All other .scd files should call this instead of s.waitForBoot

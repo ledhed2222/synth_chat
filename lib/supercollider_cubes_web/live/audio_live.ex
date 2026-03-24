@@ -21,21 +21,4 @@ defmodule SupercolliderCubesWeb.AudioLive do
   def handle_event("connection_status", %{"connected" => connected}, socket) do
     {:noreply, assign(socket, :connected, connected)}
   end
-
-  @impl true
-  def handle_event(
-        "client-audio-update",
-        %{"frequency" => %{"x" => fx, "y" => fy}, "filterCutoff" => %{"x" => cx}},
-        socket
-      ) do
-    freq = 200 + fx * 1800
-    amp = 1 - fy
-    filter_cutoff = 200 + cx * 7800
-
-    SupercolliderCubes.ScSynth.send_command(
-      "~synth.set(\\freq, #{freq}, \\amp, #{amp}, \\filterCutoff, #{filter_cutoff})"
-    )
-
-    {:noreply, socket}
-  end
 end
