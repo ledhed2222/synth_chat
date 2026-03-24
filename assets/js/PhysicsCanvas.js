@@ -74,136 +74,56 @@ function createBlock({ label, x, y, color }) {
 
 export default class PhysicsCanvas extends ViewHook {
   mounted() {
-    this.connect()
-
-    const render = Matter.Render.create({
-      engine: ENGINE,
-      element: this.el,
-      options: RENDER_OPTIONS,
-    })
-    Matter.Render.run(render)
-    Matter.Runner.run(RUNNER, ENGINE)
-
-    Matter.World.add(ENGINE.world, WALLS)
-
-    const mouse = Matter.Mouse.create(render.canvas)
-    const mouseConstraint = Matter.MouseConstraint.create(ENGINE, { mouse })
-    Matter.World.add(ENGINE.world, mouseConstraint)
-
-    // Create named blocks and keep references by label
-    this.blocks = {}
-    for (const block of BLOCKS) {
-      const body = createBlock(block)
-      this.blocks[block.label] = {
-        originalColor: body.render.fillStyle,
-        body,
-      }
-      Matter.World.add(ENGINE.world, body)
-    }
-
-    // Lock a block when a user starts dragging it until they have finished
-    // and prevent locked blocks from being moved
+    // holds lock state for each block
     this.lockedByOthers = new Set()
     this.lockedByMe = new Set()
+    this.previouslyLockedByMe = new Set()
 
-    Matter.Events.on(mouseConstraint, 'startdrag', (event) => {
-      if (this.lockedByOthers.has(event.body.label)) {
-        mouseConstraint.constraint.bodyB = null
-        mouseConstraint.constraint.pointB = null
-        mouseConstraint.body = null
-        return
-      }
-      this.lockedByMe.add(event.body.label)
-      this.channel.push('lock-block', {
-        block: event.body.label,
-        by: this.peerId,
-      })
+    // holds tick for update changes
+    this.lastSent = 0
+
+    this.connect()
+    this.setupRenderer()
+    this.buildBlocks()
+
+    Matter.Events.on(this.mouseConstraint, 'startdrag', (event) => {
+      this.onStartDrag(event)
     })
 
-    Matter.Events.on(mouseConstraint, 'enddrag', (event) => {
-      if (this.lockedByOthers.has(event.body.label)) {
-        mouseConstraint.constraint.bodyB = null
-        mouseConstraint.constraint.pointB = null
-        mouseConstraint.body = null
-        return
-      }
-      Matter.Body.setVelocity(event.body, {
-        x: 0,
-        y: 0,
-      })
-      Matter.Body.setAngularVelocity(event.body, 0)
-      this.lockedByMe.delete(event.body.label)
-      this.channel.push('unlock-block', {
-        block: event.body.label,
-        by: this.peerId,
-      })
+    Matter.Events.on(this.mouseConstraint, 'enddrag', (event) => {
+      this.onEndDrag(event)
     })
 
     this.channel.on('lock-block', (payload) => {
-      if (payload.by === this.peerId) {
-        return
-      }
-      this.lockedByOthers.add(payload.block)
-      this.blocks[payload.block].body.render.fillStyle = 'red'
+      this.onLockBlock(payload)
     })
 
     this.channel.on('unlock-block', (payload) => {
-      if (payload.by === this.peerId) {
-        return
-      }
-      this.lockedByOthers.delete(payload.block)
-      this.blocks[payload.block].body.render.fillStyle =
-        this.blocks[payload.block].originalColor
+      this.onUnlockBlock(payload)
     })
-    // END block locking
 
-    // Send positions to Elixir on each physics tick, throttled to ~10Hz
-    // TODO what i really want to do is track the motion of a block that was
-    // moved by this user until it stops?
-    let lastSent = 0
-    Matter.Events.on(ENGINE, 'afterUpdate', () => {
-      const now = Date.now()
-      if (now - lastSent < 10) {
-        return
-      }
-      lastSent = now
-
-      // TODO there is a better way to do all of this
-      let anyChangesByMe = false
-      const payload = {
-        by: this.peerId,
-        changes: [],
-      }
-      for (const block of Object.entries(this.blocks)) {
-        const [label, { body }] = block
-        if (!this.lockedByMe.has(label)) {
-          continue
-        }
-        anyChangesByMe = true
-        payload.changes.push({
-          x: body.position.x,
-          y: body.position.y,
-          xNormalized: normalize(body.position.x, WIDTH),
-          yNormalized: normalize(body.position.y, HEIGHT),
-          label,
-        })
-      }
-      if (anyChangesByMe) {
-        this.channel.push('block-update', payload)
-      }
-    })
+    Matter.Events.on(ENGINE, 'afterUpdate', () => this.onAfterUpdate())
 
     this.channel.on('block-update', (payload) => {
-      if (payload.by === this.peerId) {
-        return
-      }
-      console.log(payload)
-      for (const change of payload.changes) {
-        Matter.Body.setPosition(this.blocks[change.label].body, {
-          x: change.x,
-          y: change.y,
-        })
-      }
+      this.onBlockUpdate(payload)
+    })
+  }
+
+  buildBroadcastPosition(body, label) {
+    return {
+      x: body.position.x,
+      y: body.position.y,
+      xNormalized: normalize(body.position.x, WIDTH),
+      yNormalized: normalize(body.position.y, HEIGHT),
+      label,
+    }
+  }
+
+  lerpToTarget(body, target) {
+    const alpha = 0.2
+    Matter.Body.setPosition(body, {
+      x: body.position.x + (target.x - body.position.x) * alpha,
+      y: body.position.y + (target.y - body.position.y) * alpha,
     })
   }
 
@@ -220,5 +140,118 @@ export default class PhysicsCanvas extends ViewHook {
       .receive('error', (response) => {
         console.log('Unable to join physics room', response)
       })
+  }
+
+  setupRenderer() {
+    const render = Matter.Render.create({
+      engine: ENGINE,
+      element: this.el,
+      options: RENDER_OPTIONS,
+    })
+    Matter.Render.run(render)
+    Matter.Runner.run(RUNNER, ENGINE)
+
+    Matter.World.add(ENGINE.world, WALLS)
+
+    const mouse = Matter.Mouse.create(render.canvas)
+    this.mouseConstraint = Matter.MouseConstraint.create(ENGINE, { mouse })
+    Matter.World.add(ENGINE.world, this.mouseConstraint)
+  }
+
+  buildBlocks() {
+    this.blocks = {}
+    for (const block of BLOCKS) {
+      const body = createBlock(block)
+      this.blocks[block.label] = {
+        originalColor: body.render.fillStyle,
+        body,
+      }
+      Matter.World.add(ENGINE.world, body)
+    }
+  }
+
+  onStartDrag(event) {
+    if (this.lockedByOthers.has(event.body.label)) {
+      this.stopDrag()
+      return
+    }
+    this.previouslyLockedByMe.delete(event.body.label)
+    this.blocks[event.body.label].target = null
+    this.lockedByMe.add(event.body.label)
+    this.channel.push('lock-block', {
+      block: event.body.label,
+      by: this.peerId,
+    })
+  }
+
+  onEndDrag(event) {
+    if (this.lockedByOthers.has(event.body.label)) {
+      this.stopDrag()
+      return
+    }
+    Matter.Body.setAngularVelocity(event.body, 0)
+    this.blocks[event.body.label].target = null
+    this.lockedByMe.delete(event.body.label)
+    this.previouslyLockedByMe.add(event.body.label)
+    this.channel.push('unlock-block', {
+      block: event.body.label,
+      by: this.peerId,
+    })
+  }
+
+  stopDrag() {
+    this.mouseConstraint.constraint.bodyB = null
+    this.mouseConstraint.constraint.pointB = null
+    this.mouseConstraint.body = null
+  }
+
+  onLockBlock(payload) {
+    if (payload.by === this.peerId) {
+      return
+    }
+    this.previouslyLockedByMe.delete(payload.block)
+    this.lockedByOthers.add(payload.block)
+    this.blocks[payload.block].body.render.fillStyle = '#e2e8f0'
+  }
+
+  onUnlockBlock(payload) {
+    if (payload.by === this.peerId) {
+      return
+    }
+    this.lockedByOthers.delete(payload.block)
+    this.blocks[payload.block].body.render.fillStyle =
+      this.blocks[payload.block].originalColor
+  }
+
+  onAfterUpdate() {
+    const now = Date.now()
+    if (now - this.lastSent < 10) {
+      return
+    }
+    this.lastSent = now
+
+    const payload = {
+      by: this.peerId,
+      changes: [],
+    }
+    for (const [label, { body, target }] of Object.entries(this.blocks)) {
+      if (this.lockedByMe.has(label) || this.previouslyLockedByMe.has(label)) {
+        payload.changes.push(this.buildBroadcastPosition(body, label))
+      } else if (target) {
+        this.lerpToTarget(body, target)
+      }
+    }
+    if (payload.changes.length > 0) {
+      this.channel.push('block-update', payload)
+    }
+  }
+
+  onBlockUpdate(payload) {
+    if (payload.by === this.peerId) {
+      return
+    }
+    for (const change of payload.changes) {
+      this.blocks[change.label].target = { x: change.x, y: change.y }
+    }
   }
 }
