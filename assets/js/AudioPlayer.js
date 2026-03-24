@@ -10,7 +10,11 @@ export default class AudioPlayer extends ViewHook {
     this.handleEvent('unmute_audio', () => {
       this.el.muted = false
       if (this.el.srcObject) {
-        this.el.play().catch((error) => console.error('Error starting audio playback:', error))
+        this.el
+          .play()
+          .catch((error) =>
+            console.error('Error starting audio playback:', error),
+          )
       }
       this.pushEvent('connection_status', { connected: true })
     })
@@ -27,8 +31,7 @@ export default class AudioPlayer extends ViewHook {
   connect() {
     console.log('Connecting WebRTC audio stream (muted)...')
 
-    // Generate a unique peer ID
-    this.peerId = this.generatePeerId()
+    this.peerId = window.uuid
 
     // Create Phoenix Channel connection
     const socket = new Socket('/socket', {})
@@ -178,12 +181,6 @@ export default class AudioPlayer extends ViewHook {
     this.el.srcObject = stream
     this.el.muted = true
     this.el.volume = 1.0
-  }
-
-  generatePeerId() {
-    return Array.from(crypto.getRandomValues(new Uint8Array(16)))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
   }
 
   destroyed() {

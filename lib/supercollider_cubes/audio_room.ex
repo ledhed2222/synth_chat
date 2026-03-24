@@ -51,6 +51,7 @@ defmodule SupercolliderCubes.AudioRoom do
   end
 
   @impl true
+  # TODO should also remove from multiplexer
   def handle_call({:remove_peer, peer_id}, _from, state) do
     Logger.info("Stopping pipeline for peer: #{peer_id}")
 
