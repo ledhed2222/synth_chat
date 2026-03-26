@@ -1,6 +1,8 @@
 import Matter from 'matter-js'
-import { Socket } from 'phoenix'
 import { ViewHook } from 'phoenix_live_view'
+
+import SOCKET from './socket'
+import UUID from './uuid'
 
 const WIDTH = 800
 const HEIGHT = 800
@@ -128,10 +130,8 @@ export default class PhysicsCanvas extends ViewHook {
   }
 
   connect() {
-    this.peerId = window.uuid
-    const socket = new Socket('/socket', {})
-    socket.connect()
-    this.channel = socket.channel('physics:lobby', {})
+    this.peerId = UUID
+    this.channel = SOCKET.channel('physics:lobby', {})
     this.channel
       .join()
       .receive('ok', (response) => {

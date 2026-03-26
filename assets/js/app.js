@@ -26,18 +26,16 @@ import { LiveSocket } from 'phoenix_live_view'
 import topbar from '../vendor/topbar'
 import AudioPlayer from './AudioPlayer'
 import PhysicsCanvas from './PhysicsCanvas'
+import UUID from './uuid'
 
 const csrfToken = window.document
   .querySelector("meta[name='csrf-token']")
-  .getAttribute('content')
-window.uuid = window.document
-  .querySelector("meta[name='uuid']")
   .getAttribute('content')
 const liveSocket = new LiveSocket('/live', Socket, {
   longPollFallbackMs: 2500,
   params: {
     _csrf_token: csrfToken,
-    uuid: window.uuid,
+    uuid: UUID,
   },
   hooks: {
     AudioPlayer,

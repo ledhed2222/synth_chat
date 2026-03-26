@@ -1,5 +1,7 @@
-import { Socket } from 'phoenix'
 import { ViewHook } from 'phoenix_live_view'
+
+import SOCKET from './socket'
+import UUID from './uuid'
 
 export default class AudioPlayer extends ViewHook {
   mounted() {
@@ -31,13 +33,8 @@ export default class AudioPlayer extends ViewHook {
   connect() {
     console.log('Connecting WebRTC audio stream (muted)...')
 
-    this.peerId = window.uuid
-
-    // Create Phoenix Channel connection
-    const socket = new Socket('/socket', {})
-    socket.connect()
-
-    this.channel = socket.channel(`audio:${this.peerId}`, {})
+    this.peerId = UUID
+    this.channel = SOCKET.channel(`audio:${this.peerId}`, {})
 
     this.channel
       .join()
