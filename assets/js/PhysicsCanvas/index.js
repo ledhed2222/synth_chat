@@ -1,9 +1,14 @@
 import Matter from 'matter-js'
 import { ViewHook } from 'phoenix_live_view'
 
-import SOCKET from './socket'
-import UUID from './uuid'
+import SOCKET from '../socket'
+import UUID from '../uuid'
+import WORLD from './world'
 
+// color of a locked block
+const LOCK_COLOR = '#e2e8f0'
+
+// constant for lerping
 const LERP_ALPHA = 0.2
 
 // maximum speed of any body
@@ -11,81 +16,6 @@ const MAX_SPEED = 25
 
 // client tick for sending updates
 const TICK = 100
-
-const WIDTH = 800
-const HEIGHT = 800
-const RENDER_OPTIONS = {
-  width: WIDTH,
-  height: HEIGHT,
-  wireframes: false,
-}
-const ENGINE = Matter.Engine.create({
-  enableSleeping: true,
-  positionIterations: 10,
-  velocityIterations: 15,
-})
-ENGINE.gravity = {
-  x: 0,
-  y: 0,
-  scale: 0,
-}
-const RUNNER = Matter.Runner.create()
-
-const BLOCKS = [
-  { label: 'frequency', x: WIDTH / 2, y: 100, color: '#d79921' },
-  { label: 'filterCutoff', x: WIDTH / 2 - 100, y: 100, color: '#ff80ed' },
-]
-
-const WALL_THICKNESS = 500
-const WALLS = [
-  // floor
-  Matter.Bodies.rectangle(
-    WIDTH / 2,
-    HEIGHT + WALL_THICKNESS / 2,
-    WIDTH,
-    WALL_THICKNESS,
-    { isStatic: true },
-  ),
-  // ceiling
-  Matter.Bodies.rectangle(
-    WIDTH / 2,
-    -WALL_THICKNESS / 2,
-    WIDTH,
-    WALL_THICKNESS,
-    { isStatic: true },
-  ),
-  // left
-  Matter.Bodies.rectangle(
-    -WALL_THICKNESS / 2,
-    HEIGHT / 2,
-    WALL_THICKNESS,
-    HEIGHT,
-    { isStatic: true },
-  ),
-  // right
-  Matter.Bodies.rectangle(
-    WIDTH + WALL_THICKNESS / 2,
-    HEIGHT / 2,
-    WALL_THICKNESS,
-    HEIGHT,
-    { isStatic: true },
-  ),
-]
-
-// Normalize a position value to 0.0–1.0 within the canvas bounds
-function normalize(value, max) {
-  return Math.min(1, Math.max(0, value / max))
-}
-
-function createBlock({ label, x, y, color }) {
-  return Matter.Bodies.rectangle(x, y, 50, 50, {
-    label,
-    render: { fillStyle: color },
-    inertia: Infinity,
-    frictionAir: 0.05,
-    restitution: 0.5,
-  })
-}
 
 export default class PhysicsCanvas extends ViewHook {
   mounted() {
@@ -99,9 +29,8 @@ export default class PhysicsCanvas extends ViewHook {
 
     this.connect()
     this.setupRenderer()
-    this.buildBlocks()
 
-    Matter.Events.on(ENGINE, 'beforeUpdate', (_event) => {
+    Matter.Events.on(WORLD.ENGINE, 'beforeUpdate', (_event) => {
       this.onBeforeUpdate()
     })
 
@@ -121,7 +50,7 @@ export default class PhysicsCanvas extends ViewHook {
       this.onUnlockBlock(payload)
     })
 
-    Matter.Events.on(ENGINE, 'afterUpdate', () => this.onAfterUpdate())
+    Matter.Events.on(WORLD.ENGINE, 'afterUpdate', () => this.onAfterUpdate())
 
     this.channel.on('block-update', (payload) => {
       this.onBlockUpdate(payload)
@@ -132,13 +61,14 @@ export default class PhysicsCanvas extends ViewHook {
     return {
       x: body.position.x,
       y: body.position.y,
-      xNormalized: normalize(body.position.x, WIDTH),
-      yNormalized: normalize(body.position.y, HEIGHT),
+      xNormalized: WORLD.normalizeWidth(body.position.x),
+      yNormalized: WORLD.normalizeHeight(body.position.y),
       label,
     }
   }
 
   lerpToTarget(body, target) {
+    Matter.Sleeping.set(body, false)
     Matter.Body.setVelocity(body, {
       x: (target.x - body.position.x) * LERP_ALPHA,
       y: (target.y - body.position.y) * LERP_ALPHA,
@@ -150,27 +80,70 @@ export default class PhysicsCanvas extends ViewHook {
     this.channel = SOCKET.channel('physics:lobby', {})
     this.channel
       .join()
-      .receive('ok', (response) => {
-        console.log('Joined physics room successfully', response)
+      .receive('ok', ({ blocks }) => {
+        this.setupInitialServerBlockState(blocks)
       })
       .receive('error', (response) => {
-        console.log('Unable to join physics room', response)
+        console.error('Unable to join physics room', response)
       })
+  }
+
+  setupInitialServerBlockState(blocks) {
+    this.blocks = {}
+    for (const block of blocks) {
+      const { label, xNormalized, yNormalized, lockedBy, color } = block
+      const x = WORLD.denormalizeWidth(xNormalized)
+      const y = WORLD.denormalizeHeight(yNormalized)
+      const body = WORLD.createBlock({
+        label,
+        color,
+        x,
+        y,
+      })
+      console.log(block)
+      this.blocks[block.label] = {
+        originalColor: color,
+        body,
+      }
+      Matter.World.add(WORLD.ENGINE.world, body)
+
+      Matter.Body.setVelocity(body, { x: 0, y: 0 })
+      if (lockedBy) {
+        this.lockBlock(label, lockedBy)
+      }
+    }
+  }
+
+  lockBlock(label, by) {
+    if (by === this.peerId) {
+      return
+    }
+    this.previouslyLockedByMe.delete(label)
+    this.lockedByOthers.add(label)
+    this.blocks[label].body.render.fillStyle = LOCK_COLOR
+  }
+
+  unlockBlock(label, by) {
+    if (by === this.peerId) {
+      return
+    }
+    this.lockedByOthers.delete(label)
+    this.blocks[label].body.render.fillStyle = this.blocks[label].originalColor
   }
 
   setupRenderer() {
     const render = Matter.Render.create({
-      engine: ENGINE,
+      engine: WORLD.ENGINE,
       element: this.el,
-      options: RENDER_OPTIONS,
+      options: WORLD.RENDER_OPTIONS,
     })
     Matter.Render.run(render)
-    Matter.Runner.run(RUNNER, ENGINE)
+    Matter.Runner.run(WORLD.RUNNER, WORLD.ENGINE)
 
-    Matter.World.add(ENGINE.world, WALLS)
+    Matter.World.add(WORLD.ENGINE.world, WORLD.WALLS)
 
     const mouse = Matter.Mouse.create(render.canvas)
-    this.mouseConstraint = Matter.MouseConstraint.create(ENGINE, {
+    this.mouseConstraint = Matter.MouseConstraint.create(WORLD.ENGINE, {
       mouse,
       constraint: {
         stiffness: 0.1,
@@ -180,19 +153,7 @@ export default class PhysicsCanvas extends ViewHook {
         },
       },
     })
-    Matter.World.add(ENGINE.world, this.mouseConstraint)
-  }
-
-  buildBlocks() {
-    this.blocks = {}
-    for (const block of BLOCKS) {
-      const body = createBlock(block)
-      this.blocks[block.label] = {
-        originalColor: body.render.fillStyle,
-        body,
-      }
-      Matter.World.add(ENGINE.world, body)
-    }
+    Matter.World.add(WORLD.ENGINE.world, this.mouseConstraint)
   }
 
   onStartDrag(event) {
@@ -231,21 +192,11 @@ export default class PhysicsCanvas extends ViewHook {
   }
 
   onLockBlock(payload) {
-    if (payload.by === this.peerId) {
-      return
-    }
-    this.previouslyLockedByMe.delete(payload.block)
-    this.lockedByOthers.add(payload.block)
-    this.blocks[payload.block].body.render.fillStyle = '#e2e8f0'
+    this.lockBlock(payload.block, payload.by)
   }
 
   onUnlockBlock(payload) {
-    if (payload.by === this.peerId) {
-      return
-    }
-    this.lockedByOthers.delete(payload.block)
-    this.blocks[payload.block].body.render.fillStyle =
-      this.blocks[payload.block].originalColor
+    this.unlockBlock(payload.block, payload.by)
   }
 
   onAfterUpdate() {

@@ -12,6 +12,8 @@ defmodule SupercolliderCubes.Application do
       {DNSCluster,
        query: Application.get_env(:supercollider_cubes, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: SupercolliderCubes.PubSub},
+      # Canonical block positions shared across all clients
+      SupercolliderCubes.PhysicsState,
       # Start SuperCollider command client (connects to Docker container)
       SupercolliderCubes.ScSynth,
       # Start the audio room manager for WebRTC streaming

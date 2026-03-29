@@ -5,21 +5,24 @@ defmodule SupercolliderCubesWeb.PhysicsChannel do
   use SupercolliderCubesWeb, :channel
   require Logger
 
+  alias SupercolliderCubes.PhysicsState
   alias SupercolliderCubes.ScSynth
 
   @impl true
   def join("physics:lobby", _payload, socket) do
-    {:ok, socket}
+    {:ok, %{blocks: PhysicsState.get_all()}, socket}
   end
 
   @impl true
-  def handle_in("lock-block", msg, socket) do
+  def handle_in("lock-block", %{"block" => label, "by" => by} = msg, socket) do
+    PhysicsState.lock(label, by)
     broadcast!(socket, "lock-block", msg)
     {:noreply, socket}
   end
 
   @impl true
-  def handle_in("unlock-block", msg, socket) do
+  def handle_in("unlock-block", %{"block" => label, "by" => by} = msg, socket) do
+    PhysicsState.unlock(label, by)
     broadcast!(socket, "unlock-block", msg)
     {:noreply, socket}
   end
@@ -27,6 +30,8 @@ defmodule SupercolliderCubesWeb.PhysicsChannel do
   @impl true
   def handle_in("block-update", msg, socket) do
     %{"changes" => changes} = msg
+
+    PhysicsState.update(changes)
 
     changes
     |> Enum.each(fn change ->
@@ -46,7 +51,7 @@ defmodule SupercolliderCubesWeb.PhysicsChannel do
         "filterCutoff" ->
           # convert position from 0..1 to -1..1
           pos = x * 2 - 1
-          cutoff = 200 + y * 7800
+          cutoff = 50 + (1 - y) * 7800
 
           ScSynth.send_command("~synth.set(\\cutoff, #{cutoff}, \\pos, #{pos})")
 
