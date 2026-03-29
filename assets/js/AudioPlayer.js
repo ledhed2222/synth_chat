@@ -31,61 +31,32 @@ export default class AudioPlayer extends ViewHook {
   }
 
   connect() {
-    console.log('Connecting WebRTC audio stream (muted)...')
-
     this.peerId = UUID
     this.channel = SOCKET.channel(`audio:${this.peerId}`, {})
 
     this.channel
       .join()
-      .receive('ok', (response) => {
-        console.log('Joined audio channel', response)
-        this.setupWebRTC()
-      })
+      .receive('ok', () => this.setupWebRTC())
       .receive('error', (resp) => {
-        console.error('Unable to join', resp)
+        console.error('Unable to join audio channel', resp)
       })
 
-    // Handle signaling messages from Membrane
-    this.channel.on(`audio:${this.peerId}`, (msg) => {
-      console.log('Received WebRTC message:', msg)
-      this.handleSignal(msg)
-    })
+    this.channel.on(`audio:${this.peerId}`, (msg) => this.handleSignal(msg))
   }
 
   setupWebRTC() {
-    // Create RTCPeerConnection
     const stunServer = this.el.dataset.stunServer
     this.peerConnection = new RTCPeerConnection({
       iceServers: stunServer ? [{ urls: stunServer }] : [],
     })
 
-    // Handle incoming audio tracks
     this.peerConnection.ontrack = (event) => {
-      console.log('Received remote track:', event.track)
-      console.log('Track settings:', event.track.getSettings())
-      console.log('Track muted:', event.track.muted)
-      console.log('Track enabled:', event.track.enabled)
-      console.log('Streams:', event.streams)
-
-      // Wait for the track to unmute
-      event.track.onunmute = () => {
-        console.log('Track unmuted!')
-        this.playAudio(event)
-      }
-
-      event.track.onmute = () => {
-        console.log('Track muted!')
-      }
-
-      // Set up the stream but don't play yet — wait for user interaction (unmute click)
+      event.track.onunmute = () => this.playAudio(event)
       this.playAudio(event)
     }
 
-    // Handle ICE candidates
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log('Sending ICE candidate')
         const candidateMsg = {
           type: 'ice_candidate',
           data: event.candidate.toJSON(),
@@ -94,7 +65,6 @@ export default class AudioPlayer extends ViewHook {
       }
     }
 
-    // Handle connection state changes
     this.peerConnection.onconnectionstatechange = () => {
       console.log('Connection state:', this.peerConnection.connectionState)
       if (this.peerConnection.connectionState === 'connected') {
@@ -106,9 +76,6 @@ export default class AudioPlayer extends ViewHook {
         this.pushEvent('connection_status', { connected: false })
       }
     }
-
-    // Wait for offer from server (don't create one ourselves)
-    console.log('Waiting for offer from server...')
   }
 
   handleSignal(msg) {
@@ -117,20 +84,28 @@ export default class AudioPlayer extends ViewHook {
     switch (type) {
       case 'sdp_offer':
       case 'offer': {
-        console.log('Received offer from server, creating answer')
-        // Membrane sends {type: 'sdp_offer', data: {type: 'offer', sdp: '...'}}
         const offerData = data || msg
         this.peerConnection
           .setRemoteDescription(new RTCSessionDescription(offerData))
-          .then(() => {
-            return this.peerConnection.createAnswer()
-          })
+          .then(() => this.peerConnection.createAnswer())
           .then((answer) => {
-            return this.peerConnection.setLocalDescription(answer)
+            // Chrome defaults to stereo=0 in its answer, causing mono decoding.
+            // Force stereo=1 so Chrome configures its Opus decoder for 2 channels.
+            let stereoSdp = answer.sdp
+            if (/a=fmtp:111 /.test(stereoSdp)) {
+              stereoSdp = stereoSdp.replace(
+                /(a=fmtp:111 [^\r\n]*)/,
+                (match) => match.includes('stereo=1') ? match : match + ';stereo=1'
+              )
+            } else {
+              stereoSdp = stereoSdp.replace(
+                /(a=rtpmap:111 [^\r\n]*\r?\n)/,
+                '$1a=fmtp:111 minptime=10;useinbandfec=1;stereo=1\r\n'
+              )
+            }
+            return this.peerConnection.setLocalDescription({ type: answer.type, sdp: stereoSdp })
           })
           .then(() => {
-            console.log('Sending answer to server')
-            // Send answer in the format Membrane expects
             const answerMsg = {
               type: 'sdp_answer',
               data: this.peerConnection.localDescription.toJSON(),
@@ -145,8 +120,6 @@ export default class AudioPlayer extends ViewHook {
 
       case 'ice_candidate':
       case 'candidate': {
-        console.log('Adding ICE candidate')
-        // Membrane sends {type: 'ice_candidate', data: {candidate: '...', ...}}
         const candidateData = data || msg
         this.peerConnection
           .addIceCandidate(new RTCIceCandidate(candidateData))
@@ -162,12 +135,10 @@ export default class AudioPlayer extends ViewHook {
   }
 
   playAudio(event) {
-    console.log(this.el)
     if (!this.el) {
       return
     }
 
-    // Create MediaStream from track if streams array is empty
     let stream
     if (event.streams && event.streams.length > 0) {
       stream = event.streams[0]

@@ -14,8 +14,8 @@ defmodule SupercolliderCubes.ScSynth do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def send_command(commands) when is_bitstring(commands) do
-    GenServer.cast(__MODULE__, {:send_command, sanitize(commands)})
+  def send_command(command) when is_bitstring(command) do
+    GenServer.cast(__MODULE__, {:send_command, command |> sanitize()})
   end
 
   def send_command(commands) when is_list(commands) do
@@ -90,7 +90,6 @@ defmodule SupercolliderCubes.ScSynth do
 
   @impl true
   def handle_cast({:send_command, command}, %{socket: socket} = state) do
-    Logger.debug("Sending command to SC: #{command}")
     :gen_tcp.send(socket, command <> "\n")
     {:noreply, state}
   end

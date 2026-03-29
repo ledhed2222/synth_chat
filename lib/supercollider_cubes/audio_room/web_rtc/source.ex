@@ -1,12 +1,12 @@
 defmodule SupercolliderCubes.AudioRoom.WebRTC.Source do
   @moduledoc """
-  A simple Membrane source. Registers itself with Multiplexer
-  and then sends all Opus frames it receives from the Multiplexer out as
+  A simple Membrane source. Registers itself with PubSub
+  and then sends all Opus frames it receives from PubSub out as
   Membrane.Buffers for the WebRTC pipeline.
   """
   use Membrane.Source
 
-  alias SupercolliderCubes.AudioRoom.Multiplexer
+  alias Phoenix.PubSub
 
   def_output_pad(:output,
     accepted_format: Membrane.Opus,
@@ -15,7 +15,7 @@ defmodule SupercolliderCubes.AudioRoom.WebRTC.Source do
 
   @impl true
   def handle_init(_context, _opts) do
-    Multiplexer.register_listener(self())
+    PubSub.subscribe(SupercolliderCubes.PubSub, "opus_frames")
     {[], %{playing: false}}
   end
 
