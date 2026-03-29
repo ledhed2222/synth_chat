@@ -75,7 +75,6 @@ defmodule SupercolliderCubes.PhysicsState do
     blocks =
       Enum.reduce(changes, state.blocks, fn change, acc ->
         %{"label" => label, "xNormalized" => x, "yNormalized" => y} = change
-        {:ok, block} = Map.fetch(state.blocks, label)
         %{:color => color} = get_in(state.blocks, [label])
         Map.put(acc, label, %{label: label, xNormalized: x, yNormalized: y, color: color})
       end)
