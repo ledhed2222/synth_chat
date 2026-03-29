@@ -3,7 +3,6 @@ defmodule SupercolliderCubes.AudioRoom.WebRTC do
   A membrane pipeline for WebRTC comms with an individual listener
   """
   use Membrane.Pipeline
-
   require Membrane.Logger
 
   alias Membrane.WebRTC

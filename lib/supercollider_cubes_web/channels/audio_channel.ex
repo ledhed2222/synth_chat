@@ -3,7 +3,6 @@ defmodule SupercolliderCubesWeb.AudioChannel do
   Phoenix Channel for WebRTC signaling using Membrane.WebRTC.PhoenixSignaling.
   """
   use SupercolliderCubesWeb, :channel
-
   require Logger
 
   alias SupercolliderCubes.AudioRoom
@@ -38,10 +37,30 @@ defmodule SupercolliderCubesWeb.AudioChannel do
 
   @impl true
   def handle_info({:membrane_webrtc_signaling, _pid, msg, _metadata}, socket) do
-    # Membrane already sends in the right format, just pass through
-    push(socket, socket.assigns.signaling_id, msg)
+    push(socket, socket.assigns.signaling_id, inject_stereo_into_offer(msg))
     {:noreply, socket}
   end
+
+  # Inject stereo=1;sprop-stereo=1 into the Opus fmtp line of the SDP offer.
+  # ExWebRTCSink hardcodes the Opus codec params without an fmtp line, so browsers
+  # default to mono decoding. This patches the offer before forwarding to the client.
+  defp inject_stereo_into_offer(%{"type" => "sdp_offer", "data" => %{"sdp" => sdp} = data} = msg)
+       when is_binary(sdp) do
+    modified_sdp =
+      if String.contains?(sdp, "a=fmtp:111") do
+        sdp
+      else
+        Regex.replace(
+          ~r/(a=rtpmap:111 opus\/48000\/2\r?\n)/,
+          sdp,
+          "\\1a=fmtp:111 minptime=10;useinbandfec=1;stereo=1;sprop-stereo=1\r\n"
+        )
+      end
+
+    %{msg | "data" => %{data | "sdp" => modified_sdp}}
+  end
+
+  defp inject_stereo_into_offer(msg), do: msg
 
   @impl true
   def terminate(_reason, socket) do

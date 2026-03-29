@@ -4,6 +4,7 @@ defmodule SupercolliderCubes.AudioRoom.EncodingPipeline.Source do
   Connects to the SuperCollider Docker container's audio stream.
   """
   use Membrane.Source
+  require Logger
 
   alias Membrane.Buffer
 
@@ -45,7 +46,6 @@ defmodule SupercolliderCubes.AudioRoom.EncodingPipeline.Source do
 
   @impl true
   def handle_playing(_ctx, state) do
-    # Send stream format first
     stream_format = %Membrane.RawAudio{
       sample_format: :s16le,
       sample_rate: state.sample_rate,
@@ -63,8 +63,6 @@ defmodule SupercolliderCubes.AudioRoom.EncodingPipeline.Source do
 
   @impl true
   def handle_info({:tcp, _socket, data}, _ctx, state) do
-    # Calculate duration of this chunk in nanoseconds
-    # Each sample is 2 bytes (s16le), we have 2 channels
     bytes_per_sample = 2 * state.channels
     num_samples = byte_size(data) / bytes_per_sample
     duration_ns = trunc(num_samples / state.sample_rate * 1_000_000_000)

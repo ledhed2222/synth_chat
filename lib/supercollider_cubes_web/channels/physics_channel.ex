@@ -3,14 +3,13 @@ defmodule SupercolliderCubesWeb.PhysicsChannel do
   Handles all the updates of the shared physics canvas state between users
   """
   use SupercolliderCubesWeb, :channel
+  require Logger
+
+  alias SupercolliderCubes.ScSynth
 
   @impl true
-  def join("physics:lobby", payload, socket) do
-    if authorized?(payload) do
-      {:ok, socket}
-    else
-      {:error, %{reason: "unauthorized"}}
-    end
+  def join("physics:lobby", _payload, socket) do
+    {:ok, socket}
   end
 
   @impl true
@@ -31,20 +30,26 @@ defmodule SupercolliderCubesWeb.PhysicsChannel do
 
     changes
     |> Enum.each(fn change ->
-      %{"label" => label} = change
+      %{
+        "label" => label,
+        "xNormalized" => x,
+        "yNormalized" => y
+      } = change
 
       case label do
         "frequency" ->
-          %{"xNormalized" => x, "yNormalized" => y} = change
           freq = 200 + x * 1800
           amp = 1 - y
-          SupercolliderCubes.ScSynth.send_command("~synth.set(\\freq, #{freq}, \\amp, #{amp})")
+          ScSynth.send_command("~synth.set(\\freq, #{freq}, \\amp, #{amp})")
           :ok
 
         "filterCutoff" ->
-          %{"xNormalized" => x} = change
-          filter_cutoff = 200 + x * 7800
-          SupercolliderCubes.ScSynth.send_command("~synth.set(\\filterCutoff, #{filter_cutoff})")
+          # convert position from 0..1 to -1..1
+          pos = x * 2 - 1
+          cutoff = 200 + y * 7800
+
+          ScSynth.send_command("~synth.set(\\cutoff, #{cutoff}, \\pos, #{pos})")
+
           :ok
 
         _ ->
@@ -54,10 +59,5 @@ defmodule SupercolliderCubesWeb.PhysicsChannel do
 
     broadcast!(socket, "block-update", msg)
     {:noreply, socket}
-  end
-
-  # Add authorization logic here as required.
-  defp authorized?(_payload) do
-    true
   end
 end

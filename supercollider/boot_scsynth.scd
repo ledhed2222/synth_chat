@@ -14,13 +14,12 @@ s.options.memSize = 1048576;
 ~whenReady = {|func|
     fork {
         while({ ~bootComplete.not }, { 0.1.wait });
-        ("~whenReady: executing " ++ func.def.sourceCode).postln;
         func.value;
     };
 };
 
 s.waitForBoot({
-    "Audio server booted!".postln;
+    "Calling `waitForBoot`...".post;
 
     // 1920-frame buffer (power of 2 * 2) — flushes every 960 frames = 20ms,
     // matching a single Opus frame exactly to avoid bursty delivery.
@@ -48,6 +47,7 @@ s.waitForBoot({
     };
 
     ~bootComplete = true;
+
+    "done!".postln;
     "Streaming audio to /tmp/audio.fifo on port 7777".postln;
-    "Ready for on_connection.scd — call ~startSynth.(\\defName, [\\arg, val])".postln;
 });

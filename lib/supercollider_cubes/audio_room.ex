@@ -28,9 +28,7 @@ defmodule SupercolliderCubes.AudioRoom do
   def init(_opts) do
     Logger.info("Starting AudioRoom")
 
-    # Start the multiplexer and encoding pipeline
-    {:ok, _pid} = AudioRoom.Multiplexer.start_link()
-
+    # Start the encoding pipeline
     {:ok, _supervisor, _pid} =
       Membrane.Pipeline.start_link(AudioRoom.EncodingPipeline)
 

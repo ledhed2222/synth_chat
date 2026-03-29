@@ -4,6 +4,14 @@ import { ViewHook } from 'phoenix_live_view'
 import SOCKET from './socket'
 import UUID from './uuid'
 
+const LERP_ALPHA = 0.2
+
+// maximum speed of any body
+const MAX_SPEED = 25
+
+// client tick for sending updates
+const TICK = 100
+
 const WIDTH = 800
 const HEIGHT = 800
 const RENDER_OPTIONS = {
@@ -11,7 +19,11 @@ const RENDER_OPTIONS = {
   height: HEIGHT,
   wireframes: false,
 }
-const ENGINE = Matter.Engine.create()
+const ENGINE = Matter.Engine.create({
+  enableSleeping: true,
+  positionIterations: 10,
+  velocityIterations: 15,
+})
 ENGINE.gravity = {
   x: 0,
   y: 0,
@@ -24,8 +36,7 @@ const BLOCKS = [
   { label: 'filterCutoff', x: WIDTH / 2 - 100, y: 100, color: '#ff80ed' },
 ]
 
-const WALL_THICKNESS = 50
-// TODO Boundaries instead?
+const WALL_THICKNESS = 500
 const WALLS = [
   // floor
   Matter.Bodies.rectangle(
@@ -71,6 +82,8 @@ function createBlock({ label, x, y, color }) {
     label,
     render: { fillStyle: color },
     inertia: Infinity,
+    frictionAir: 0.05,
+    restitution: 0.5,
   })
 }
 
@@ -87,6 +100,10 @@ export default class PhysicsCanvas extends ViewHook {
     this.connect()
     this.setupRenderer()
     this.buildBlocks()
+
+    Matter.Events.on(ENGINE, 'beforeUpdate', (_event) => {
+      this.onBeforeUpdate()
+    })
 
     Matter.Events.on(this.mouseConstraint, 'startdrag', (event) => {
       this.onStartDrag(event)
@@ -122,10 +139,9 @@ export default class PhysicsCanvas extends ViewHook {
   }
 
   lerpToTarget(body, target) {
-    const alpha = 0.2
-    Matter.Body.setPosition(body, {
-      x: body.position.x + (target.x - body.position.x) * alpha,
-      y: body.position.y + (target.y - body.position.y) * alpha,
+    Matter.Body.setVelocity(body, {
+      x: (target.x - body.position.x) * LERP_ALPHA,
+      y: (target.y - body.position.y) * LERP_ALPHA,
     })
   }
 
@@ -154,7 +170,16 @@ export default class PhysicsCanvas extends ViewHook {
     Matter.World.add(ENGINE.world, WALLS)
 
     const mouse = Matter.Mouse.create(render.canvas)
-    this.mouseConstraint = Matter.MouseConstraint.create(ENGINE, { mouse })
+    this.mouseConstraint = Matter.MouseConstraint.create(ENGINE, {
+      mouse,
+      constraint: {
+        stiffness: 0.1,
+        damping: 0.05,
+        render: {
+          visible: false,
+        },
+      },
+    })
     Matter.World.add(ENGINE.world, this.mouseConstraint)
   }
 
@@ -225,7 +250,7 @@ export default class PhysicsCanvas extends ViewHook {
 
   onAfterUpdate() {
     const now = Date.now()
-    if (now - this.lastSent < 10) {
+    if (now - this.lastSent < TICK) {
       return
     }
     this.lastSent = now
@@ -247,11 +272,29 @@ export default class PhysicsCanvas extends ViewHook {
   }
 
   onBlockUpdate(payload) {
-    if (payload.by === this.peerId) {
-      return
-    }
+    if (payload.by === this.peerId) return
     for (const change of payload.changes) {
-      this.blocks[change.label].target = { x: change.x, y: change.y }
+      const block = this.blocks[change.label]
+      block.target = { x: change.x, y: change.y }
+
+      // Kill existing velocity so the LERP is the only thing moving it
+      Matter.Body.setVelocity(block.body, { x: 0, y: 0 })
+    }
+  }
+
+  onBeforeUpdate() {
+    // Check if the mouse is currently holding a body
+    const draggedBody = this.mouseConstraint.body
+
+    if (draggedBody) {
+      const speed = Matter.Vector.magnitude(draggedBody.velocity)
+      if (speed > MAX_SPEED) {
+        const unitVector = Matter.Vector.normalise(draggedBody.velocity)
+        Matter.Body.setVelocity(
+          draggedBody,
+          Matter.Vector.mult(unitVector, MAX_SPEED),
+        )
+      }
     }
   }
 }
