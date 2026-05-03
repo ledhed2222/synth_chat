@@ -10,6 +10,7 @@ defmodule SupercolliderCubes.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      dialyzer: [plt_add_apps: [:mix], plt_file: {:no_warn, "priv/plts/dialyzer.plt"}],
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader]
     ]
@@ -70,7 +71,8 @@ defmodule SupercolliderCubes.MixProject do
       ## additional dependencies
       {:membrane_core, "~> 1.2"},
       {:membrane_webrtc_plugin, "~> 0.26"},
-      {:membrane_opus_plugin, "~> 0.20"}
+      {:membrane_opus_plugin, "~> 0.20"},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false}
     ]
   end
 

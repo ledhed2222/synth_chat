@@ -10,14 +10,17 @@ defmodule SupercolliderCubes.AudioRoom do
 
   # Client API
 
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  @spec start_link(keyword()) :: GenServer.on_start()
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @spec add_peer(String.t()) :: :ok
   def add_peer(peer_id) do
     GenServer.call(__MODULE__, {:add_peer, peer_id})
   end
 
+  @spec remove_peer(String.t()) :: :ok
   def remove_peer(peer_id) do
     GenServer.call(__MODULE__, {:remove_peer, peer_id})
   end
@@ -49,7 +52,6 @@ defmodule SupercolliderCubes.AudioRoom do
   end
 
   @impl true
-  # TODO should also remove from multiplexer
   def handle_call({:remove_peer, peer_id}, _from, state) do
     Logger.info("Stopping pipeline for peer: #{peer_id}")
 

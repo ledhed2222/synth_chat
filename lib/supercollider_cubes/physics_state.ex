@@ -6,6 +6,8 @@ defmodule SupercolliderCubes.PhysicsState do
   """
   use GenServer
 
+  alias SupercolliderCubes.ScSynth
+
   # Defaults match the BLOCKS array in PhysicsCanvas.js (800x800 canvas).
   @default_blocks [
     %{
@@ -22,8 +24,10 @@ defmodule SupercolliderCubes.PhysicsState do
     }
   ]
 
-  # Client API
+  @type label_change_position :: %{required(String.t()) => term()}
 
+  # Client API
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
@@ -72,8 +76,12 @@ defmodule SupercolliderCubes.PhysicsState do
 
   @impl true
   def handle_cast({:update, changes}, state) do
+    changes
+    |> Enum.each(&update_synth/1)
+
     blocks =
-      Enum.reduce(changes, state.blocks, fn change, acc ->
+      changes
+      |> Enum.reduce(state.blocks, fn change, acc ->
         %{"label" => label, "xNormalized" => x, "yNormalized" => y} = change
         %{:color => color} = get_in(state.blocks, [label])
         Map.put(acc, label, %{label: label, xNormalized: x, yNormalized: y, color: color})
@@ -96,5 +104,21 @@ defmodule SupercolliderCubes.PhysicsState do
       end
 
     {:noreply, %{state | locks: locks}}
+  end
+
+  @spec update_synth(label_change_position()) :: :ok
+  defp update_synth(%{"label" => "frequency", "xNormalized" => x, "yNormalized" => y}) do
+    freq = 200 + x * 1800
+    amp = 1 - y
+    ScSynth.send_command("~synth.set(\\freq, #{freq}, \\amp, #{amp})")
+    :ok
+  end
+
+  defp update_synth(%{"label" => "filterCutoff", "xNormalized" => x, "yNormalized" => y}) do
+    # convert position from 0..1 to -1..1
+    pos = x * 2 - 1
+    cutoff = 50 + (1 - y) * 7800
+    ScSynth.send_command("~synth.set(\\cutoff, #{cutoff}, \\pos, #{pos})")
+    :ok
   end
 end

@@ -8,6 +8,8 @@ defmodule SupercolliderCubes.AudioRoom.WebRTC do
   alias Membrane.WebRTC
   alias SupercolliderCubes.AudioRoom.WebRTC.Source
 
+  @type stun_server :: %{urls: String.t()}
+
   @impl true
   def handle_init(_ctx, signaling_id: signaling_id) do
     spec = [
@@ -38,6 +40,7 @@ defmodule SupercolliderCubes.AudioRoom.WebRTC do
     {[], state}
   end
 
+  @spec get_stun_server() :: [stun_server()]
   defp get_stun_server do
     case System.get_env("STUN_SERVER", "") do
       "" ->

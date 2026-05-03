@@ -44,6 +44,7 @@ defmodule SupercolliderCubesWeb.AudioChannel do
   # Inject stereo=1;sprop-stereo=1 into the Opus fmtp line of the SDP offer.
   # ExWebRTCSink hardcodes the Opus codec params without an fmtp line, so browsers
   # default to mono decoding. This patches the offer before forwarding to the client.
+  @spec inject_stereo_into_offer(map()) :: map()
   defp inject_stereo_into_offer(%{"type" => "sdp_offer", "data" => %{"sdp" => sdp} = data} = msg)
        when is_binary(sdp) do
     modified_sdp =
