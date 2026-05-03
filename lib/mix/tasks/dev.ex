@@ -12,6 +12,10 @@ defmodule Mix.Tasks.Dev do
 
   use Mix.Task
 
+  # stream_sc_logs runs a tail-recursive receive loop that Dialyzer can't prove terminates;
+  # docker_compose uses System.cmd/3 with into: which confuses Dialyzer's type analysis
+  @dialyzer {:nowarn_function, run: 1, stream_sc_logs: 0, stream_port: 1, docker_compose: 1}
+
   @compose_dir "."
 
   @impl Mix.Task
@@ -43,9 +47,13 @@ defmodule Mix.Tasks.Dev do
     port =
       Port.open(
         {:spawn_executable, System.find_executable("docker")},
-        [:stream, :line, :exit_status,
-         args: ["compose", "logs", "supercollider", "--follow", "--no-log-prefix"],
-         cd: @compose_dir]
+        [
+          :stream,
+          :line,
+          :exit_status,
+          args: ["compose", "logs", "supercollider", "--follow", "--no-log-prefix"],
+          cd: @compose_dir
+        ]
       )
 
     stream_port(port)

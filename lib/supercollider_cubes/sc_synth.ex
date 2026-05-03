@@ -8,20 +8,25 @@ defmodule SupercolliderCubes.ScSynth do
 
   @sclang_port 57120
 
-  # Client API
+  @type nested_strings :: String.t() | [nested_strings()]
 
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  # Client API
+  @spec start_link(keyword()) :: GenServer.on_start()
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @spec send_command(nested_strings()) :: :ok
   def send_command(command) when is_bitstring(command) do
     GenServer.cast(__MODULE__, {:send_command, command |> sanitize()})
   end
 
-  def send_command(commands) when is_list(commands) do
-    Enum.each(commands, &send_command/1)
+  def send_command(command) when is_list(command) do
+    command
+    |> Enum.each(&send_command/1)
   end
 
+  @spec sanitize(String.t()) :: String.t()
   defp sanitize(command) do
     command
     |> String.replace(~r/\/\/.*\n/, "")
@@ -102,10 +107,12 @@ defmodule SupercolliderCubes.ScSynth do
 
   def terminate(_reason, _state), do: :ok
 
+  @spec sclang_host() :: charlist()
   defp sclang_host do
     System.get_env("SC_HOST", "localhost") |> String.to_charlist()
   end
 
+  @spec sc_init_script() :: String.t()
   defp sc_init_script do
     path = Application.app_dir(:supercollider_cubes, "priv/supercollider/on_connection.scd")
 

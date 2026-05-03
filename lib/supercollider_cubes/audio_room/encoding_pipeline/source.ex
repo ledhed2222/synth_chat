@@ -4,7 +4,6 @@ defmodule SupercolliderCubes.AudioRoom.EncodingPipeline.Source do
   Connects to the SuperCollider Docker container's audio stream.
   """
   use Membrane.Source
-  require Logger
 
   alias Membrane.Buffer
 
