@@ -18,4 +18,7 @@
     ~startSynth.(\testTone);
 
     "Instrument ready: testTone at 440Hz".postln;
+    // Machine-readable marker: ScSynth waits for this before pushing current
+    // block positions, since ~startSynth above resets to these hardcoded defaults.
+    "SC_SYNTH_READY".postln;
 });

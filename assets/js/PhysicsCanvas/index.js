@@ -19,6 +19,10 @@ const TICK = 100
 
 export default class PhysicsCanvas extends ViewHook {
   mounted() {
+    // populated once the server sends initial block state; the engine can
+    // tick (and call onAfterUpdate) before that arrives
+    this.blocks = {}
+
     // holds lock state for each block
     this.lockedByOthers = new Set()
     this.lockedByMe = new Set()
@@ -89,7 +93,6 @@ export default class PhysicsCanvas extends ViewHook {
   }
 
   setupInitialServerBlockState(blocks) {
-    this.blocks = {}
     for (const block of blocks) {
       const { label, xNormalized, yNormalized, lockedBy, color } = block
       const x = WORLD.denormalizeWidth(xNormalized)

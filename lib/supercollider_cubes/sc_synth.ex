@@ -6,7 +6,11 @@ defmodule SupercolliderCubes.ScSynth do
   use GenServer
   require Logger
 
+  alias Phoenix.PubSub
+
   @sclang_port 57120
+  @connected_topic "sc_synth:connected"
+  @ready_marker "SC_SYNTH_READY"
 
   @type nested_strings :: String.t() | [nested_strings()]
 
@@ -70,6 +74,15 @@ defmodule SupercolliderCubes.ScSynth do
   @impl true
   def handle_info({:tcp, _socket, data}, state) do
     Logger.debug("SC output: #{String.trim(data)}")
+
+    # ~startSynth resets to the SynthDef's hardcoded defaults, so only push a
+    # resync once SC confirms the synth actually exists, not just that we
+    # finished writing on_connection.scd to the socket (which has an async
+    # `s.sync` in it, letting resync commands race ahead and get lost).
+    if String.contains?(data, @ready_marker) do
+      PubSub.broadcast(SupercolliderCubes.PubSub, @connected_topic, :sc_synth_connected)
+    end
+
     {:noreply, state}
   end
 

@@ -9,6 +9,12 @@ export default class AudioPlayer extends ViewHook {
     this.peerConnection = null
     this.peerId = null
 
+    this.volumeSlider = document.getElementById('volume-slider')
+    this.el.volume = parseFloat(this.volumeSlider.value)
+    this.volumeSlider.addEventListener('input', () => {
+      this.el.volume = parseFloat(this.volumeSlider.value)
+    })
+
     this.handleEvent('unmute_audio', () => {
       this.el.muted = false
       if (this.el.srcObject) {
@@ -93,17 +99,19 @@ export default class AudioPlayer extends ViewHook {
             // Force stereo=1 so Chrome configures its Opus decoder for 2 channels.
             let stereoSdp = answer.sdp
             if (/a=fmtp:111 /.test(stereoSdp)) {
-              stereoSdp = stereoSdp.replace(
-                /(a=fmtp:111 [^\r\n]*)/,
-                (match) => match.includes('stereo=1') ? match : match + ';stereo=1'
+              stereoSdp = stereoSdp.replace(/(a=fmtp:111 [^\r\n]*)/, (match) =>
+                match.includes('stereo=1') ? match : match + ';stereo=1',
               )
             } else {
               stereoSdp = stereoSdp.replace(
                 /(a=rtpmap:111 [^\r\n]*\r?\n)/,
-                '$1a=fmtp:111 minptime=10;useinbandfec=1;stereo=1\r\n'
+                '$1a=fmtp:111 minptime=10;useinbandfec=1;stereo=1\r\n',
               )
             }
-            return this.peerConnection.setLocalDescription({ type: answer.type, sdp: stereoSdp })
+            return this.peerConnection.setLocalDescription({
+              type: answer.type,
+              sdp: stereoSdp,
+            })
           })
           .then(() => {
             const answerMsg = {
@@ -148,7 +156,7 @@ export default class AudioPlayer extends ViewHook {
 
     this.el.srcObject = stream
     this.el.muted = true
-    this.el.volume = 1.0
+    this.el.volume = parseFloat(this.volumeSlider.value)
   }
 
   destroyed() {
