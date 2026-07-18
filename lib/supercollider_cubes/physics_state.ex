@@ -6,7 +6,10 @@ defmodule SupercolliderCubes.PhysicsState do
   """
   use GenServer
 
+  alias Phoenix.PubSub
   alias SupercolliderCubes.ScSynth
+
+  @sc_connected_topic "sc_synth:connected"
 
   # Defaults match the BLOCKS array in PhysicsCanvas.js (800x800 canvas).
   @default_blocks [
@@ -56,6 +59,8 @@ defmodule SupercolliderCubes.PhysicsState do
 
   @impl true
   def init(_opts) do
+    PubSub.subscribe(SupercolliderCubes.PubSub, @sc_connected_topic)
+
     state = %{
       blocks: Map.new(@default_blocks, fn block -> {block.label, block} end),
       locks: %{}
@@ -104,6 +109,19 @@ defmodule SupercolliderCubes.PhysicsState do
       end
 
     {:noreply, %{state | locks: locks}}
+  end
+
+  # SC boots the synth with its SynthDef's hardcoded defaults, not our
+  # current positions, so push a resync whenever it (re)connects.
+  @impl true
+  def handle_info(:sc_synth_connected, state) do
+    state.blocks
+    |> Map.values()
+    |> Enum.each(fn %{label: label, xNormalized: x, yNormalized: y} ->
+      update_synth(%{"label" => label, "xNormalized" => x, "yNormalized" => y})
+    end)
+
+    {:noreply, state}
   end
 
   @spec update_synth(label_change_position()) :: :ok
