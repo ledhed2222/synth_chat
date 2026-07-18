@@ -1,5 +1,9 @@
 import Config
 
+# AudioRoom's pipeline connects out to a live SuperCollider/Docker audio
+# stream on boot and crashes if none is running, which isn't available in CI.
+config :supercollider_cubes, start_audio_room: false
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used

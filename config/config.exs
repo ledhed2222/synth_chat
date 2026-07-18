@@ -9,7 +9,8 @@ import Config
 
 config :supercollider_cubes,
   ecto_repos: [SupercolliderCubes.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  start_audio_room: true
 
 # Configures the endpoint
 config :supercollider_cubes, SupercolliderCubesWeb.Endpoint,

@@ -10,18 +10,19 @@ defmodule SupercolliderCubesWeb.PhysicsChannelTest do
     %{socket: socket}
   end
 
-  test "ping replies with status ok", %{socket: socket} do
-    ref = push(socket, "ping", %{"hello" => "there"})
-    assert_reply ref, :ok, %{"hello" => "there"}
+  test "lock-block broadcasts to physics:lobby", %{socket: socket} do
+    push(socket, "lock-block", %{"block" => "frequency", "by" => "user_id"})
+    assert_broadcast "lock-block", %{"block" => "frequency", "by" => "user_id"}
   end
 
-  test "shout broadcasts to physics:lobby", %{socket: socket} do
-    push(socket, "shout", %{"hello" => "all"})
-    assert_broadcast "shout", %{"hello" => "all"}
+  test "unlock-block broadcasts to physics:lobby", %{socket: socket} do
+    push(socket, "unlock-block", %{"block" => "frequency", "by" => "user_id"})
+    assert_broadcast "unlock-block", %{"block" => "frequency", "by" => "user_id"}
   end
 
-  test "broadcasts are pushed to the client", %{socket: socket} do
-    broadcast_from!(socket, "broadcast", %{"some" => "data"})
-    assert_push "broadcast", %{"some" => "data"}
+  test "block-update broadcasts to physics:lobby", %{socket: socket} do
+    changes = [%{"label" => "frequency", "xNormalized" => 0.6, "yNormalized" => 0.3}]
+    push(socket, "block-update", %{"changes" => changes})
+    assert_broadcast "block-update", %{"changes" => ^changes}
   end
 end
