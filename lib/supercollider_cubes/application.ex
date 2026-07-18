@@ -7,20 +7,25 @@ defmodule SupercolliderCubes.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      SupercolliderCubesWeb.Telemetry,
-      {DNSCluster,
-       query: Application.get_env(:supercollider_cubes, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: SupercolliderCubes.PubSub},
-      # Canonical block positions shared across all clients
-      SupercolliderCubes.PhysicsState,
-      # Start SuperCollider command client (connects to Docker container)
-      SupercolliderCubes.ScSynth,
-      # Start the audio room manager for WebRTC streaming
-      SupercolliderCubes.AudioRoom,
-      # Start to serve requests, typically the last entry
-      SupercolliderCubesWeb.Endpoint
-    ]
+    children =
+      [
+        SupercolliderCubes.Repo,
+        SupercolliderCubesWeb.Telemetry,
+        {DNSCluster,
+         query: Application.get_env(:supercollider_cubes, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: SupercolliderCubes.PubSub},
+        # Canonical block positions shared across all clients
+        SupercolliderCubes.PhysicsState,
+        # Start SuperCollider command client (connects to Docker container)
+        SupercolliderCubes.ScSynth,
+        # Start the audio room manager for WebRTC streaming
+        if Application.get_env(:supercollider_cubes, :start_audio_room) do
+          SupercolliderCubes.AudioRoom
+        end,
+        # Start to serve requests, typically the last entry
+        SupercolliderCubesWeb.Endpoint
+      ]
+      |> Enum.reject(&is_nil/1)
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
