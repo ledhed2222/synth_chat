@@ -2,11 +2,14 @@
   "name": "supercollider_cubes",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "description": "SuperCollider audio streaming with Phoenix",
   "repository": {},
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
-    "deploy": "cd .. && mix assets.deploy && rm -f _build/esbuild*"
+    "deploy": "cd .. && mix assets.deploy && rm -f _build/esbuild*",
+    "lint": "eslint .",
+    "stylelint": "stylelint css/**/*.css"
   },
   "prettier": "@ledhed2222/prettier-config",
   "dependencies": {
@@ -16,14 +19,16 @@
     "phoenix_live_view": "file:../deps/phoenix_live_view"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@ledhed2222/eslint-config": "^1.1.0",
     "@ledhed2222/prettier-config": "^1.0.0",
+    "@ledhed2222/stylelint-config": "^1.0.1",
     "@types/matter-js": "^0.20.2",
     "esbuild": "^0.28.1",
-    "eslint": "^10.1.0",
+    "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "globals": "^17.4.0",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "stylelint": "^17.15.0"
   }
 }
