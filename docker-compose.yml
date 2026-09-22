@@ -3,7 +3,6 @@ services:
     build:
       context: ./supercollider
       dockerfile: Dockerfile
-    container_name: sc_audio
     volumes:
       - ./supercollider:/sc
       - /dev/shm:/dev/shm

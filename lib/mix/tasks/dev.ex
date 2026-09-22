@@ -71,9 +71,14 @@ defmodule Mix.Tasks.Dev do
   end
 
   defp docker_compose(args) do
+    # BuildKit's default "tty" progress mode probes for a real console, which
+    # System.cmd/3 never provides (Erlang ports pipe stdout even when the
+    # parent shell has one), so it crashes with "failed to get console:
+    # provided file is not a console" unless forced to plain output.
     {_, exit_code} =
       System.cmd("docker", ["compose"] ++ args,
         cd: @compose_dir,
+        env: [{"BUILDKIT_PROGRESS", "plain"}],
         into: IO.stream(:stdio, :line)
       )
 
