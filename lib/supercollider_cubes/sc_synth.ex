@@ -8,7 +8,7 @@ defmodule SupercolliderCubes.ScSynth do
 
   alias Phoenix.PubSub
 
-  @sclang_port 57120
+  @sclang_port 57_120
   @connected_topic "sc_synth:connected"
   @ready_marker "SC_SYNTH_READY"
 

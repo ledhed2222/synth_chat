@@ -100,7 +100,7 @@ export default class AudioPlayer extends ViewHook {
             let stereoSdp = answer.sdp
             if (/a=fmtp:111 /.test(stereoSdp)) {
               stereoSdp = stereoSdp.replace(/(a=fmtp:111 [^\r\n]*)/, (match) =>
-                match.includes('stereo=1') ? match : match + ';stereo=1',
+                match.includes('stereo=1') ? match : `${match};stereo=1`,
               )
             } else {
               stereoSdp = stereoSdp.replace(

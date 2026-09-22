@@ -51,3 +51,23 @@ jobs:
       - run: mix format --check-formatted
       - run: mix test
       - run: mix dialyzer
+      - run: mix credo
+
+  lint-assets:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: assets
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: npm
+          cache-dependency-path: assets/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run stylelint
+      - run: npx prettier --check .

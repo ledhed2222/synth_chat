@@ -1,0 +1,10 @@
+{
+  "extends": "@ledhed2222/stylelint-config",
+  "rules": {
+    "import-notation": null,
+    "at-rule-no-unknown": [
+      true,
+      { "ignoreAtRules": ["source", "plugin", "custom-variant"] }
+    ]
+  }
+}

@@ -5,8 +5,8 @@ defmodule SupercolliderCubesWeb.AudioChannel do
   use SupercolliderCubesWeb, :channel
   require Logger
 
-  alias SupercolliderCubes.AudioRoom
   alias Membrane.WebRTC.PhoenixSignaling
+  alias SupercolliderCubes.AudioRoom
 
   @impl true
   def join("audio:" <> peer_id, _params, socket) do
