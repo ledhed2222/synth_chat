@@ -72,7 +72,8 @@ defmodule SupercolliderCubes.MixProject do
       {:membrane_core, "~> 1.2"},
       {:membrane_webrtc_plugin, "~> 0.26"},
       {:membrane_opus_plugin, "~> 0.20"},
-      {:dialyxir, "~> 1.4", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 
